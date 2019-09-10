@@ -5,22 +5,24 @@
 
 -export([new/1, r/1, l/1, p/2, e/1]).
 
-new([Start | _] = Tape) -> { Start, 0, Tape }.
+new([Start | _] = Tape) -> {Start, {0, Tape}}.
 
-r({ _, Pointer, Tape }) -> {
+r({_, [_ | _]} = Machine) -> r({none, Machine});
+r({_, {Pointer, Tape}}) -> {
     nth(Pointer + 1, Tape),
-    Pointer + 1, Tape
+    {Pointer + 1, Tape}
 }.
 
-l({ _, Pointer, Tape }) when Pointer > 0 -> {
+l({_, [_ | _]} = Machine) -> l({none, Machine});
+l({_, {Pointer, Tape}}) when Pointer > 0 -> {
     nth(Pointer - 1, Tape),
-    Pointer - 1, Tape
+    {Pointer - 1, Tape}
 }.
 
-p(Symbol, {_, Pointer, Tape}) -> {
+p(Symbol, {_, [_ | _]} = Machine) -> p(Symbol, {none, Machine});
+p(Symbol, {_, {Pointer, Tape}}) -> {
     Symbol,
-    Pointer,
-    set(Pointer, Tape, Symbol)
+    {Pointer, set(Pointer, Tape, Symbol)}
 }.
 
 e(Machine) -> p(none, Machine).

@@ -1,6 +1,6 @@
 %% Main boot point of the program.
 %%
-%% @author:
+%% @author: Michael Bausano <bausanomichal@gmail.com>
 -module(main).
 
 %% Boot function has to be always exported with zero arity.
@@ -10,43 +10,54 @@
 
 %% This is where it all starts.
 start() ->
-  Machine = machine:new([s, none, e, 0, none, 0, none, 0, none, 0, none, none, e, 1, none, 1, none, 0, none, 1, none, none, r]),
-  io:format("~p\n", [start(Machine)]).
+  Machine = machine:new([
+    s, none, e,
+    1, none, 0, none, 1, none, 1, none, 1, none, 1, none, 1, none, 1, none, 1, none, 0, none, 1, none, %% 1533
+    none, e,
+    1, none, 1, none, 1, none, 1, none, 1, none, 0, none, 1, none, 1, none, 1, none, 0, none, 0, none, %% 479
+    none, r
+  ]),
+  {_, Tape} = start(Machine),
+  io:format("~p\n", [Tape]).
 
-turing1({ _, N, _ } = Machine) when N > 20 -> Machine;
-turing1({ none, _, _} = Machine) -> turing1(p(0, Machine));
-turing1({ 0, _, _ } = Machine) -> turing1(p(1, r(r(Machine))));
-turing1({ 1, _, _ } = Machine) -> turing1(p(0, r(r(Machine)))).
+start({t, Machine}) -> next(r(r(p(e, e(Machine)))));
+start({s, Machine}) -> next(r(r(Machine)));
+start({1, Machine}) -> start(l(Machine));
+start({0, Machine}) -> start(l(Machine));
+start({_, Machine}) -> start(l(l(Machine))).
 
-start({ s, _, _} = Machine) -> next(r(r(Machine)));
-start({ 1, _, _} = Machine) -> start(l(Machine));
-start({ 0, _, _} = Machine) -> start(l(Machine));
-start(Machine) -> start(l(l(Machine))).
+next({x, Machine}) -> next(r(r(Machine)));
+next({e, Machine}) -> next(r(r(Machine)));
+next({none, Machine}) -> decide(l(p(x, Machine)));
+next({r, Machine}) -> finish({r, Machine}).
 
-next({ x, _, _} = Machine) -> next(r(r(Machine)));
-next({ e, _, _} = Machine) -> next(r(r(Machine)));
-next({ none, _, _ } = Machine) -> decide(l(p(x, Machine)));
-next({ r, _, _} = Machine) -> place_clean(r(r(p(f, e(Machine)))));
-next({ f, _, _ } = Machine) -> Machine.
+decide({1, Machine}) -> move_carry(r(Machine));
+decide({0, Machine}) -> move_clean(r(Machine)).
 
-decide({ 1, _, _ } = Machine) -> move_carry(r(Machine));
-decide({ 0, _, _ } = Machine) -> move_clean(r(Machine)).
+move_carry({r, Machine}) -> place_carry(r(r(Machine)));
+move_carry({e, Machine}) -> move_carry(r(r(p(t, e(Machine)))));
+move_carry({_, Machine}) -> move_carry(r(r(Machine))).
 
-move_carry({ r, _, _ } = Machine) -> place_carry(r(r(Machine)));
-move_carry(Machine) -> move_carry(r(r(Machine))).
+move_clean({r, Machine}) -> place_clean(r(r(Machine)));
+move_clean({e, Machine}) -> move_clean(r(r(p(t, e(Machine)))));
+move_clean({_, Machine}) -> move_clean(r(r(Machine))).
 
-move_clean({ r, _, _ } = Machine) -> place_clean(r(r(Machine)));
-move_clean(Machine) -> move_clean(r(r(Machine))).
+place_carry({x, Machine}) -> place_carry(r(r(Machine)));
+place_carry({none, Machine}) -> start(p(c, Machine));
+place_carry({i, Machine}) -> start(p(1, l(p(x, e(Machine)))));
+place_carry({d, Machine}) -> start(p(g, e(Machine)));
+place_carry({g, Machine}) -> start(p(d, r(r(r(p(1, l(p(x, e(Machine)))))))));
+place_carry({c, Machine}) -> start(p(d, r(r(r(p(0, l(p(x, e(Machine))))))))).
 
-place_carry({ x, _, _} = Machine) -> place_carry(r(r(Machine)));
-place_carry({ none, _, _} = Machine) -> start(p(c, Machine));
-place_carry({ i, _, _} = Machine) -> start(p(1, l(p(x, e(Machine)))));
-place_carry({ d, _, _} = Machine) -> start(p(g, e(Machine)));
-place_carry({ g, _, _} = Machine) -> start(p(d, r(r(r(p(1, l(p(x, e(Machine)))))))));
-place_carry({ c, _, _} = Machine) -> start(p(d, r(r(r(p(0, l(p(x, e(Machine))))))))).
+place_clean({x, Machine}) -> place_clean(r(r(Machine)));
+place_clean({none, Machine}) -> start(p(i, Machine));
+place_clean({i, Machine}) -> start(p(0, l(p(x, e(Machine)))));
+place_clean({d, Machine}) -> start(p(c, e(Machine)));
+place_clean({c, Machine}) -> start(p(1, l(p(x, e(Machine)))));
+place_clean({g, Machine}) -> start(p(d, r(r(r(p(0, l(p(x, e(Machine))))))))).
 
-place_clean({ x, _, _} = Machine) -> place_clean(r(r(Machine)));
-place_clean({ none, _, _} = Machine) -> start(p(i, Machine));
-place_clean({ i, _, _} = Machine) -> start(p(0, l(p(x, e(Machine)))));
-place_clean({ d, _, _} = Machine) -> start(p(g, e(Machine)));
-place_clean(Machine) -> start(p(1, l(p(x, e(Machine))))).
+finish({d, Machine}) -> finish(p(1, l(e(Machine))));
+finish({g, Machine}) -> finish(p(1, l(e(Machine))));
+finish({i, Machine}) -> finish(p(0, l(e(Machine))));
+finish({none, Machine}) -> Machine;
+finish({_, Machine}) -> finish(r(r(Machine))).
